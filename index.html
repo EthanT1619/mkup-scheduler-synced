@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>보강 관리 캘린더</title>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <!-- 설정 오류 -->
+  <div id="config-error-screen" class="auth-screen hidden">
+    <div class="auth-card">
+      <h1 class="auth-title">설정 필요</h1>
+      <p id="config-error-message" class="auth-desc"></p>
+      <p class="auth-hint">SUPABASE_SETUP.md 를 참고해 supabase-config.js 를 설정해 주세요.</p>
+    </div>
+  </div>
+
+  <!-- 로그인 화면 -->
+  <div id="login-screen" class="auth-screen hidden">
+    <div class="auth-card">
+      <h1 class="auth-title">보강 관리 캘린더</h1>
+      <p class="auth-desc">Google 계정으로 로그인하면 PC와 휴대폰에서 같은 보강 일정을 볼 수 있습니다.</p>
+      <button type="button" id="btn-google-login" class="btn btn-primary btn-google">
+        <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
+          <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z"/>
+          <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+          <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+          <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+        </svg>
+        Google로 로그인
+      </button>
+      <p id="login-error" class="auth-error" role="alert"></p>
+    </div>
+  </div>
+
+  <!-- 로딩 화면 -->
+  <div id="loading-screen" class="auth-screen hidden">
+    <div class="auth-card">
+      <div class="loading-spinner" aria-hidden="true"></div>
+      <p class="auth-desc">보강 일정을 불러오는 중...</p>
+    </div>
+  </div>
+
+  <!-- 로드 오류 화면 -->
+  <div id="load-error-screen" class="auth-screen hidden">
+    <div class="auth-card">
+      <h1 class="auth-title">일정을 불러오지 못했습니다</h1>
+      <p id="load-error-message" class="auth-desc"></p>
+      <button type="button" id="btn-retry-load" class="btn btn-primary">다시 시도</button>
+    </div>
+  </div>
+
+  <div id="app" class="app hidden">
+    <div id="status-banner" class="status-banner hidden" role="status">
+      <span id="status-banner-text"></span>
+      <button type="button" id="btn-dismiss-status" class="btn-dismiss" aria-label="닫기">&times;</button>
+    </div>
+
+    <div id="migration-banner" class="migration-banner hidden" role="region" aria-label="데이터 가져오기">
+      <p id="migration-message" class="migration-message"></p>
+      <div class="migration-actions">
+        <button type="button" id="btn-migration-import" class="btn btn-sm btn-primary">가져오기</button>
+        <button type="button" id="btn-migration-later" class="btn btn-sm btn-secondary">나중에</button>
+        <button type="button" id="btn-migration-cancel" class="btn btn-sm btn-secondary">취소</button>
+        <button type="button" id="btn-clear-local-data" class="btn btn-sm btn-ghost">localStorage 삭제</button>
+      </div>
+    </div>
+
+    <header class="header">
+      <div class="header-top">
+        <div class="header-brand">
+          <h1 class="logo">보강 관리 캘린더</h1>
+        </div>
+        <div class="header-actions">
+          <button type="button" id="btn-prev-month" class="btn btn-secondary" aria-label="이전 달">◀ 이전 달</button>
+          <button type="button" id="btn-next-month" class="btn btn-secondary" aria-label="다음 달">다음 달 ▶</button>
+          <button type="button" id="btn-today" class="btn btn-secondary">오늘</button>
+          <button type="button" id="btn-add-schedule" class="btn btn-primary">보강 추가</button>
+          <button type="button" id="btn-students" class="btn btn-secondary">학생 목록</button>
+          <div class="auth-bar">
+            <span id="auth-user-label" class="auth-user-label"></span>
+            <button type="button" id="btn-logout" class="btn btn-secondary btn-sm">로그아웃</button>
+          </div>
+        </div>
+      </div>
+      <div class="header-bottom">
+        <h2 id="current-month-label" class="month-label"></h2>
+        <div class="search-box">
+          <input type="search" id="global-search" class="search-input" placeholder="학생, 반, 사유, 메모, 결석일 진도 검색..." autocomplete="off">
+        </div>
+      </div>
+    </header>
+
+    <main class="main-layout">
+      <aside class="sidebar">
+        <section class="panel filter-panel">
+          <h3 class="panel-title">반 필터</h3>
+          <div id="class-filter" class="class-filter"></div>
+        </section>
+
+        <section class="panel summary-panel">
+          <h3 class="panel-title">월간 요약</h3>
+          <div id="monthly-summary" class="monthly-summary"></div>
+        </section>
+
+        <section id="search-results-section" class="panel search-results-panel hidden">
+          <h3 class="panel-title">검색 결과</h3>
+          <div id="search-results" class="search-results"></div>
+        </section>
+      </aside>
+
+      <section class="calendar-section">
+        <div id="calendar" class="calendar"></div>
+      </section>
+
+      <aside class="right-panels">
+        <section class="panel collapsible-panel selected-day-panel is-collapsed" data-panel="selected-day">
+          <div class="panel-collapse-header">
+            <button type="button" class="panel-collapse-toggle" aria-expanded="false" aria-controls="panel-body-selected-day">
+              <svg class="panel-collapse-chevron" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
+                <path d="M8 10l4 4 4-4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+              </svg>
+              <span class="panel-title">선택일 보강</span>
+            </button>
+            <div class="panel-header-actions">
+              <button type="button" id="btn-add-selected-day" class="btn btn-sm btn-primary">추가</button>
+              <button type="button" id="btn-open-day-detail" class="btn btn-sm btn-secondary">상세</button>
+            </div>
+          </div>
+          <div id="panel-body-selected-day" class="panel-collapse-body">
+            <p id="selected-date-label" class="sub-label"></p>
+            <p id="selected-overlap-hint" class="overlap-hint hidden"></p>
+            <div id="selected-day-schedules" class="schedule-list"></div>
+          </div>
+        </section>
+
+        <section class="panel collapsible-panel today-panel" data-panel="today">
+          <div class="panel-collapse-header">
+            <button type="button" class="panel-collapse-toggle" aria-expanded="true" aria-controls="panel-body-today">
+              <svg class="panel-collapse-chevron" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
+                <path d="M8 10l4 4 4-4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+              </svg>
+              <span class="panel-title">오늘 보강</span>
+            </button>
+          </div>
+          <div id="panel-body-today" class="panel-collapse-body">
+            <p id="today-date-label" class="sub-label"></p>
+            <p id="today-overlap-hint" class="overlap-hint hidden"></p>
+            <div id="today-schedules" class="schedule-list"></div>
+          </div>
+        </section>
+
+        <section class="panel collapsible-panel week-panel is-collapsed" data-panel="week">
+          <div class="panel-collapse-header">
+            <button type="button" class="panel-collapse-toggle" aria-expanded="false" aria-controls="panel-body-week">
+              <svg class="panel-collapse-chevron" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
+                <path d="M8 10l4 4 4-4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+              </svg>
+              <span class="panel-title">이번 주 보강</span>
+            </button>
+          </div>
+          <div id="panel-body-week" class="panel-collapse-body">
+            <div id="week-schedules" class="schedule-list"></div>
+          </div>
+        </section>
+
+        <section class="panel collapsible-panel timeline-panel is-collapsed" data-panel="timeline">
+          <div class="panel-collapse-header">
+            <button type="button" class="panel-collapse-toggle" aria-expanded="false" aria-controls="panel-body-timeline">
+              <svg class="panel-collapse-chevron" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
+                <path d="M8 10l4 4 4-4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+              </svg>
+              <span class="panel-title timeline-panel-title">
+                <svg class="timeline-icon" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+                  <circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="1.5"/>
+                  <path d="M12 7v5l3 2" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                </svg>
+                보강 타임라인
+              </span>
+            </button>
+          </div>
+          <div id="panel-body-timeline" class="panel-collapse-body">
+            <p id="timeline-date-label" class="sub-label"></p>
+            <p id="timeline-overlap-hint" class="overlap-hint hidden"></p>
+            <div id="day-timeline" class="day-timeline"></div>
+          </div>
+        </section>
+      </aside>
+    </main>
+  </div>
+
+  <!-- 날짜 상세 모달 -->
+  <div id="modal-date" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="modal-date-title">
+    <div class="modal-backdrop" data-close-modal></div>
+    <div class="modal-content modal-lg">
+      <div class="modal-header">
+        <h2 id="modal-date-title" class="modal-title"></h2>
+        <button type="button" class="btn-close" data-close-modal aria-label="닫기">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div id="date-schedule-list" class="card-list"></div>
+        <p id="date-empty-msg" class="empty-msg hidden">이 날짜에 등록된 보강이 없습니다.</p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" id="btn-add-from-date" class="btn btn-primary">보강 추가</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 보강 추가/수정 모달 -->
+  <div id="modal-form" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="modal-form-title">
+    <div class="modal-backdrop" data-close-modal></div>
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 id="modal-form-title" class="modal-title">보강 추가</h2>
+        <button type="button" class="btn-close" data-close-modal aria-label="닫기">&times;</button>
+      </div>
+      <form id="schedule-form" class="modal-body form-grid">
+        <input type="hidden" id="form-id">
+        <label class="form-label">
+          <span>학생 이름</span>
+          <input type="text" id="form-student" required placeholder="예: 김민수">
+        </label>
+        <label class="form-label">
+          <span>반 이름</span>
+          <input type="text" id="form-class" required placeholder="예: DSA">
+        </label>
+        <label class="form-label">
+          <span>날짜</span>
+          <input type="date" id="form-date" required>
+        </label>
+        <label class="form-label form-full">
+          <span>보강 시간</span>
+          <div class="time-range">
+            <input type="time" id="form-start-time" required aria-label="시작 시간">
+            <span class="time-range-sep">~</span>
+            <input type="time" id="form-end-time" required aria-label="종료 시간">
+          </div>
+        </label>
+        <label class="form-label form-full">
+          <span>보강 사유</span>
+          <input type="text" id="form-reason" placeholder="예: 결석, 시험 불참">
+        </label>
+        <label class="form-label form-full">
+          <span>결석일 진도</span>
+          <input type="text" id="form-absence-progress" placeholder="예: 20260629 DSA1-4-1">
+        </label>
+        <label class="form-label form-full">
+          <span>메모</span>
+          <textarea id="form-memo" rows="2" placeholder="추가 메모"></textarea>
+        </label>
+        <label class="form-label">
+          <span>상태</span>
+          <select id="form-status">
+            <option value="scheduled">예정</option>
+            <option value="completed">완료</option>
+            <option value="cancelled">취소</option>
+          </select>
+        </label>
+      </form>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-close-modal>취소</button>
+        <button type="submit" form="schedule-form" class="btn btn-primary">저장</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 학생 목록 모달 -->
+  <div id="modal-students" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="modal-students-title">
+    <div class="modal-backdrop" data-close-modal></div>
+    <div class="modal-content modal-lg">
+      <div class="modal-header">
+        <h2 id="modal-students-title" class="modal-title">학생 목록</h2>
+        <button type="button" class="btn-close" data-close-modal aria-label="닫기">&times;</button>
+      </div>
+      <div class="modal-body">
+        <input type="search" id="student-search" class="search-input" placeholder="학생 이름 검색..." autocomplete="off">
+        <div id="student-list" class="card-list student-list"></div>
+        <p id="student-empty-msg" class="empty-msg hidden">등록된 학생이 없습니다. 보강을 추가하면 학생이 자동으로 표시됩니다.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- 학생 상세 모달 -->
+  <div id="modal-student-detail" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="modal-student-detail-title">
+    <div class="modal-backdrop" data-close-modal></div>
+    <div class="modal-content modal-lg">
+      <div class="modal-header">
+        <h2 id="modal-student-detail-title" class="modal-title"></h2>
+        <button type="button" class="btn-close" data-close-modal aria-label="닫기">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div id="student-detail-stats" class="student-detail-stats"></div>
+        <h3 class="section-subtitle">보강 이력</h3>
+        <div id="student-history" class="card-list"></div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" id="btn-add-from-student" class="btn btn-primary">이 학생 보강 추가</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 삭제 확인 모달 -->
+  <div id="modal-delete" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="modal-delete-title">
+    <div class="modal-backdrop" data-close-modal></div>
+    <div class="modal-content modal-sm">
+      <div class="modal-header">
+        <h2 id="modal-delete-title" class="modal-title">삭제 확인</h2>
+        <button type="button" class="btn-close" data-close-modal aria-label="닫기">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p>이 보강 기록을 삭제할까요?</p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-close-modal>아니오</button>
+        <button type="button" id="btn-confirm-delete" class="btn btn-danger">삭제</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="js/supabase-config.js"></script>
+  <script src="js/supabase-client.js"></script>
+  <script src="js/auth-manager.js"></script>
+  <script src="js/schedule-repository.js"></script>
+  <script src="js/storage-manager.js"></script>
+  <script src="js/schedule-manager.js"></script>
+  <script src="js/filter-manager.js"></script>
+  <script src="js/student-manager.js"></script>
+  <script src="js/calendar-manager.js"></script>
+  <script src="js/timeline-manager.js"></script>
+  <script src="js/panel-collapse.js"></script>
+  <script src="js/modal-manager.js"></script>
+  <script src="js/renderer.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
