@@ -214,17 +214,26 @@ class App {
     });
 
     document.getElementById('selected-day-schedules').addEventListener('click', (e) => {
-      if (this.handleQuickStatus(e)) return;
+      if (this.isQuickStatusTarget(e)) {
+        this.handleQuickStatus(e);
+        return;
+      }
       this.handleScheduleItemClick(e);
     });
 
     document.getElementById('today-schedules').addEventListener('click', (e) => {
-      if (this.handleQuickStatus(e)) return;
+      if (this.isQuickStatusTarget(e)) {
+        this.handleQuickStatus(e);
+        return;
+      }
       this.handleScheduleItemClick(e);
     });
 
     document.getElementById('week-schedules').addEventListener('click', (e) => {
-      if (this.handleQuickStatus(e)) return;
+      if (this.isQuickStatusTarget(e)) {
+        this.handleQuickStatus(e);
+        return;
+      }
       this.handleScheduleItemClick(e);
     });
 
@@ -403,7 +412,12 @@ class App {
     this.renderer.setTimelineDate(dateStr);
   }
 
+  isQuickStatusTarget(e) {
+    return !!e.target.closest('[data-quick-status]');
+  }
+
   handleScheduleItemClick(e) {
+    if (e.target.closest('button')) return;
     const item = e.target.closest('[data-schedule-id]');
     if (!item) return;
     const schedule = this.schedules.getById(item.dataset.scheduleId);
@@ -411,7 +425,10 @@ class App {
   }
 
   handleScheduleAction(e) {
-    if (this.handleQuickStatus(e)) return;
+    if (this.isQuickStatusTarget(e)) {
+      this.handleQuickStatus(e);
+      return;
+    }
 
     const editBtn = e.target.closest('[data-edit]');
     const deleteBtn = e.target.closest('[data-delete]');
@@ -419,6 +436,7 @@ class App {
     if (editBtn) {
       const schedule = this.schedules.getById(editBtn.dataset.edit);
       if (schedule) this.openScheduleEdit(schedule);
+      return;
     }
 
     if (deleteBtn) {
@@ -428,10 +446,10 @@ class App {
 
   async handleQuickStatus(e) {
     const btn = e.target.closest('[data-quick-status]');
-    if (!btn || this.saving) return false;
+    if (!btn || this.saving) return;
 
     const schedule = this.schedules.getById(btn.dataset.id);
-    if (!schedule) return true;
+    if (!schedule) return;
 
     try {
       this.setSavingState(true);
@@ -443,8 +461,6 @@ class App {
     } finally {
       this.setSavingState(false);
     }
-
-    return true;
   }
 
   async saveSchedule() {
