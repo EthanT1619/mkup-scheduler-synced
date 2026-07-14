@@ -51,6 +51,23 @@
     </div>
   </div>
 
+  <!-- 접근 거부 화면 -->
+  <div id="access-denied-screen" class="auth-screen hidden">
+    <div class="auth-card">
+      <h1 class="auth-title">사용 권한이 없습니다</h1>
+      <p class="auth-desc">
+        이 계정은 보강 스케줄러에 등록되지 않았습니다.<br>
+        관리자에게 로그인에 사용한 Google 이메일을 알려주세요.
+      </p>
+      <p class="access-denied-email-label">로그인 이메일</p>
+      <p id="access-denied-email" class="access-denied-email"></p>
+      <div class="access-denied-actions">
+        <button type="button" id="btn-retry-access" class="btn btn-primary">권한 다시 확인</button>
+        <button type="button" id="btn-logout-denied" class="btn btn-secondary">로그아웃</button>
+      </div>
+    </div>
+  </div>
+
   <div id="app" class="app hidden">
     <div id="status-banner" class="status-banner hidden" role="status">
       <span id="status-banner-text"></span>
@@ -323,6 +340,7 @@
   <script src="js/supabase-config.js"></script>
   <script src="js/supabase-client.js"></script>
   <script src="js/auth-manager.js"></script>
+  <script src="js/access-manager.js"></script>
   <script src="js/schedule-repository.js"></script>
   <script src="js/storage-manager.js"></script>
   <script src="js/schedule-manager.js"></script>

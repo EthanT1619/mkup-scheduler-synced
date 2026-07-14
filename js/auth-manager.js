@@ -71,6 +71,10 @@ class AuthManager {
     return this.user?.id ?? null;
   }
 
+  getEmail() {
+    return this.user?.email ?? '';
+  }
+
   getClient() {
     return this.client;
   }

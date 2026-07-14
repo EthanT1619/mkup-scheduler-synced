@@ -25,6 +25,8 @@ class App {
     this.panelCollapse = null;
     this.saving = false;
     this.loading = false;
+    this.accessDenied = false;
+    this.deniedEmail = '';
 
     this.bindAuthEvents();
     this.bindAppEvents();
@@ -62,7 +64,34 @@ class App {
     document.getElementById('app')?.classList.add('hidden');
     document.getElementById('loading-screen')?.classList.add('hidden');
     document.getElementById('load-error-screen')?.classList.add('hidden');
+    document.getElementById('access-denied-screen')?.classList.add('hidden');
     document.getElementById('config-error-screen')?.classList.add('hidden');
+  }
+
+  showAccessDenied(email) {
+    this.hideAllScreens();
+    const screen = document.getElementById('access-denied-screen');
+    const emailEl = document.getElementById('access-denied-email');
+    if (emailEl) emailEl.textContent = email || '(이메일 없음)';
+    screen?.classList.remove('hidden');
+  }
+
+  showLoadError(message) {
+    this.hideAllScreens();
+    const errScreen = document.getElementById('load-error-screen');
+    const errMsg = document.getElementById('load-error-message');
+    if (errScreen) errScreen.classList.remove('hidden');
+    if (errMsg) errMsg.textContent = message || '일정을 불러오지 못했습니다.';
+  }
+
+  clearDeniedState() {
+    this.accessDenied = false;
+    this.deniedEmail = '';
+  }
+
+  setDeniedState(email) {
+    this.accessDenied = true;
+    this.deniedEmail = email;
   }
 
   updateAuthUI() {
@@ -76,6 +105,12 @@ class App {
     this.updateAuthUI();
 
     if (!this.auth.isLoggedIn()) {
+      if (this.accessDenied && this.deniedEmail) {
+        this.showAccessDenied(this.deniedEmail);
+        return;
+      }
+
+      this.clearDeniedState();
       this.schedules.clear();
       this.repository = null;
       this.migration = null;
@@ -91,6 +126,30 @@ class App {
     try {
       const client = this.auth.getClient();
       this.repository = new ScheduleRepository(client);
+      const accessManager = new AccessManager(client);
+
+      const accessResult = await accessManager.checkAccess();
+
+      if (accessResult.status === 'denied') {
+        this.setDeniedState(this.auth.getEmail());
+        this.schedules.clear();
+        this.repository = null;
+        this.migration = null;
+        this.hideStatusBanner();
+        this.showAccessDenied(this.deniedEmail);
+        return;
+      }
+
+      if (accessResult.status === 'error') {
+        this.clearDeniedState();
+        this.schedules.clear();
+        this.repository = null;
+        this.migration = null;
+        this.showLoadError(accessResult.message);
+        return;
+      }
+
+      this.clearDeniedState();
       this.schedules = new ScheduleManager(this.repository);
       this.migration = new MigrationManager(this.storage, this.repository, this.auth);
 
@@ -109,11 +168,8 @@ class App {
       this.checkMigrationOffer();
     } catch (error) {
       console.error(error);
-      this.hideAllScreens();
-      const errScreen = document.getElementById('load-error-screen');
-      const errMsg = document.getElementById('load-error-message');
-      if (errScreen) errScreen.classList.remove('hidden');
-      if (errMsg) errMsg.textContent = error.message || '일정을 불러오지 못했습니다.';
+      this.clearDeniedState();
+      this.showLoadError(error.message || '일정을 불러오지 못했습니다.');
     }
   }
 
@@ -142,6 +198,19 @@ class App {
 
     document.getElementById('btn-retry-load')?.addEventListener('click', () => {
       this.handleAuthChange();
+    });
+
+    document.getElementById('btn-retry-access')?.addEventListener('click', () => {
+      this.handleAuthChange();
+    });
+
+    document.getElementById('btn-logout-denied')?.addEventListener('click', async () => {
+      try {
+        this.clearDeniedState();
+        await this.auth.signOut();
+      } catch (error) {
+        this.showLoadError(error.message || '로그아웃에 실패했습니다.');
+      }
     });
   }
 
