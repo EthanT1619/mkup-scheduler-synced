@@ -94,7 +94,7 @@ class App {
       this.schedules = new ScheduleManager(this.repository);
       this.migration = new MigrationManager(this.storage, this.repository, this.auth);
 
-      this.renderer.scheduleManager = this.schedules;
+      this.renderer.schedules = this.schedules;
 
       await this.schedules.load(this.auth.getUserId());
 
