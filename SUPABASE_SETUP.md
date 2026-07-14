@@ -37,11 +37,30 @@ const SUPABASE_CONFIG = {
 
 ## 3. 데이터베이스 스키마 적용
 
+### 신규 설치
+
 1. Supabase Dashboard → **SQL Editor**
 2. `supabase/schema.sql` 내용을 붙여넣기
 3. **Run** 실행
+4. `ACCESS_CONTROL_SETUP.md` 를 참고해 **allowlist 사용자 seed** 등록
 
-테이블 `makeup_schedules` 와 RLS 정책(SELECT / INSERT / UPDATE / DELETE 각각 분리)이 생성됩니다.
+### 기존 프로젝트 업데이트
+
+`ACCESS_CONTROL_SETUP.md` 의 순서대로:
+
+1. `supabase/access-control-setup.sql`
+2. `access-control-seed-template.sql` (실제 이메일로 교체)
+3. allowlist 등록 확인
+4. `supabase/access-control-policies.sql`
+5. 앱 테스트
+
+### 신규 설치
+
+1. `supabase/schema.sql` 실행
+2. **즉시** allowlist seed 등록 (`ACCESS_CONTROL_SETUP.md` 참고)
+3. seed 완료 전까지 모든 사용자 접근 차단 상태
+
+> `schema.sql` 과 `access-control-setup.sql` 을 동시에 실행하지 마세요.
 
 ## 4. Google OAuth 설정
 
@@ -146,5 +165,7 @@ http://localhost:5500/
 |------|-----------|
 | 로그인 후 빈 화면 | Redirect URL 이 Supabase allow list 와 일치하는지 |
 | 설정 필요 화면 | `supabase-config.js` 의 url / publishableKey |
-| 일정 로드 실패 | `schema.sql` 실행 여부, RLS 정책, 네트워크 |
+| 일정 로드 실패 | SQL 3단계 적용 여부, RLS 정책, 네트워크 (`ACCESS_CONTROL_SETUP.md`) |
+| 허용 사용자도 차단 | allowlist 이메일·`active` 상태 확인 (`ACCESS_CONTROL_SETUP.md`) |
+| 사용 권한 없음 화면 | allowlist 미등록 — SQL Editor에서 이메일 추가 |
 | Google 로그인 오류 | Google OAuth redirect URI = `https://xxx.supabase.co/auth/v1/callback` |

@@ -1,0 +1,28 @@
+-- makeup-scheduler-supabase: Phase 1 access control — 실행 순서 안내
+--
+-- 이 파일은 더 이상 단일 실행 스크립트가 아닙니다.
+-- 아래 3단계 파일을 순서대로 SQL Editor에서 실행하세요.
+--
+-- ┌─────────────────────────────────────────────────────────────────────────┐
+-- │  기존 프로젝트 업데이트 순서                                              │
+-- ├─────────────────────────────────────────────────────────────────────────┤
+-- │  1) access-control-setup.sql                                            │
+-- │     → 테이블·함수 생성 (makeup_schedules 정책은 아직 변경 안 함)          │
+-- │                                                                         │
+-- │  2) access-control-seed-template.sql                                    │
+-- │     → placeholder를 실제 이메일로 교체 후 실행                            │
+-- │                                                                         │
+-- │  3) allowlist 등록 확인                                                  │
+-- │     → select count(*) from allowed_scheduler_users where active = true;  │
+-- │     → 결과가 0이면 4단계로 진행하지 마세요                                │
+-- │                                                                         │
+-- │  4) access-control-policies.sql                                         │
+-- │     → makeup_schedules RLS 강화 (allowlist + owner_id)                  │
+-- │                                                                         │
+-- │  5) 앱 테스트                                                            │
+-- └─────────────────────────────────────────────────────────────────────────┘
+--
+-- 신규 설치: supabase/schema.sql 사용 (자세한 내용은 ACCESS_CONTROL_SETUP.md 참고)
+-- 롤백:     supabase/access-control-rollback.sql
+--
+-- 자세한 설명: ACCESS_CONTROL_SETUP.md

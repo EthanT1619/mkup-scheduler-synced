@@ -4,7 +4,9 @@
 
 - [ ] `SUPABASE_SETUP.md` 대로 Supabase·Google OAuth 설정 완료
 - [ ] `js/supabase-config.js` 에 URL·publishable key 입력
-- [ ] `supabase/schema.sql` 실행 완료
+- [ ] **기존 프로젝트:** `setup.sql` → seed → 확인 → `policies.sql` (`ACCESS_CONTROL_SETUP.md`)
+- [ ] **신규 프로젝트:** `schema.sql` 실행 + allowlist seed 등록
+- [ ] `ACCESS_CONTROL_SETUP.md` 참고
 - [ ] 정적 서버로 앱 실행 (localhost 또는 GitHub Pages)
 
 ---
@@ -107,17 +109,73 @@
 
 ---
 
+## 9. Allowlist 접근 제어 (Phase 1)
+
+### A. 기존 허용 사용자
+
+| # | 시나리오 | 기대 결과 | 통과 |
+|---|----------|-----------|------|
+| A.1 | allowlist 등록 + `active=true` 로 로그인 | 앱 본체 표시 | |
+| A.2 | 기존 보강 일정 표시 | 달력·목록에 기존 데이터 보임 | |
+| A.3 | 보강 추가·수정·삭제 | CRUD 정상, Supabase 반영 | |
+| A.4 | 페이지 새로고침 | 세션·일정 유지 | |
+
+### B. 다른 허용 사용자
+
+| # | 시나리오 | 기대 결과 | 통과 |
+|---|----------|-----------|------|
+| B.1 | 허용 사용자 A 일정 존재 | A 로그인 시 A 일정만 표시 | |
+| B.2 | 허용 사용자 B 로 로그인 | A 일정 **미표시** | |
+| B.3 | B 에서 CRUD | B 일정만 생성·수정·삭제 | |
+
+### C. 기존 미허용 Auth 사용자
+
+| # | 시나리오 | 기대 결과 | 통과 |
+|---|----------|-----------|------|
+| C.1 | allowlist 미등록 + 기존 auth.users 있음 | **사용 권한이 없습니다** 화면 | |
+| C.2 | 로그인 이메일 표시 | access-denied 화면에 이메일 노출 | |
+| C.3 | 일정 load | **실행되지 않음** (앱 본체 미표시) | |
+| C.4 | migration | UI·실행 **없음** | |
+| C.5 | REST/RPC 직접 호출 | `is_scheduler_user` → false, SELECT 0건 | |
+
+### D. 신규 미허용 사용자
+
+| # | 시나리오 | 기대 결과 | 통과 |
+|---|----------|-----------|------|
+| D.1 | allowlist 미등록 Google 최초 로그인 | access-denied 화면 | |
+| D.2 | Phase 1 한계 | Supabase Auth 사용자 행 **생성될 수 있음** | |
+| D.3 | 앱·DB 접근 | **차단** (Phase 2 Hook 전 남은 한계) | |
+
+### E. 네트워크 오류
+
+| # | 시나리오 | 기대 결과 | 통과 |
+|---|----------|-----------|------|
+| E.1 | RPC 호출 중 오프라인 | **denied 가 아닌** 오류 화면 | |
+| E.2 | 다시 시도 버튼 | 온라인 복구 후 정상 분기 (allowed/denied) | |
+| E.3 | denied 와 error 구분 | 미허용 ≠ 네트워크 오류 메시지 | |
+
+### F. active=false 사용자
+
+| # | 시나리오 | 기대 결과 | 통과 |
+|---|----------|-----------|------|
+| F.1 | allowlist에 있으나 `active=false` | access-denied 화면 | |
+| F.2 | 기존 세션 + 새로고침 | DB/RPC 차단 유지 | |
+| F.3 | `active=true` 로 복구 후 재시도 | 앱·일정 정상 접근 | |
+
+---
+
 ## 테스트 순서 (권장)
 
 1. 설정 오류 화면 (config 비움) → config 입력
-2. 로그인 / 로그아웃 / 세션 유지
-3. CRUD 기본 (추가·수정·삭제·상태)
-4. 달력·필터·검색·타임라인·학생 회귀
-5. PC ↔ 휴대폰 동기화
-6. 계정 A / B 격리
-7. localStorage migration (기존 데이터 있는 브라우저)
-8. 네트워크 오류·다시 시도
-9. `SECURITY_CHECKLIST.md` 항목 점검
+2. **allowlist:** `setup.sql` → seed → 확인 → `policies.sql`
+3. 허용 사용자 로그인 / 거부 사용자 로그인 (섹션 9)
+4. CRUD 기본 (추가·수정·삭제·상태)
+5. 달력·필터·검색·타임라인·학생 회귀
+6. PC ↔ 휴대폰 동기화
+7. 계정 A / B 격리 (둘 다 allowlist)
+8. localStorage migration (허용 사용자만)
+9. 네트워크 오류·다시 시도
+10. `SECURITY_CHECKLIST.md` 항목 점검
 
 ---
 
@@ -127,3 +185,4 @@
 - Supabase 무료 플랜 한도·지연
 - 다수 일정(100건+) migration 성능
 - 동시 편집 충돌 (이번 버전은 미구현)
+- **Phase 2:** Before User Created Auth Hook (미허용 auth.users 생성 차단)
