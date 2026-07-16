@@ -265,6 +265,10 @@ textarea {
   padding: 16px;
   box-shadow: var(--shadow-sm);
   border: 1px solid var(--border-light);
+  box-sizing: border-box;
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
 }
 
 .panel-title {
@@ -581,6 +585,8 @@ textarea {
   display: flex;
   flex-direction: column;
   gap: 8px;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .schedule-item {
@@ -590,21 +596,37 @@ textarea {
   border-left: 3px solid var(--status-scheduled);
   font-size: 0.875rem;
   display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
+  flex-direction: column;
+  align-items: stretch;
   gap: 10px;
+  box-sizing: border-box;
+  max-width: 100%;
+  overflow: hidden;
 }
 
 .schedule-item-main {
-  flex: 1;
+  flex: 1 1 auto;
+  width: 100%;
   min-width: 0;
+  overflow-wrap: break-word;
+  word-break: keep-all;
+  white-space: normal;
 }
 
 .schedule-item-actions {
   display: flex;
   flex-wrap: wrap;
-  gap: 4px;
+  gap: 6px;
+  width: 100%;
+  max-width: 100%;
+  align-items: center;
+}
+
+.schedule-item-actions .btn,
+.card-actions .btn,
+.parent-feedback-badge {
   flex-shrink: 0;
+  white-space: nowrap;
 }
 
 .card-actions {
@@ -612,6 +634,9 @@ textarea {
   flex-wrap: wrap;
   gap: 8px;
   align-items: center;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .parent-feedback-badge {
@@ -671,7 +696,7 @@ textarea {
 .schedule-item-time {
   font-weight: 600;
   color: var(--accent);
-  margin-bottom: 2px;
+  margin-bottom: 4px;
 }
 
 .schedule-item-date {
@@ -682,11 +707,14 @@ textarea {
 
 .schedule-item-name {
   font-weight: 600;
+  line-height: 1.4;
+  margin-bottom: 2px;
 }
 
 .schedule-item-meta {
   color: var(--text-secondary);
   font-size: 0.8rem;
+  line-height: 1.4;
 }
 
 .empty-msg {
@@ -804,6 +832,8 @@ textarea {
   flex-direction: column;
   gap: 10px;
   margin-top: 12px;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .schedule-card {
@@ -811,6 +841,20 @@ textarea {
   border-radius: var(--radius-sm);
   padding: 14px;
   border-left: 4px solid var(--status-scheduled);
+  box-sizing: border-box;
+  max-width: 100%;
+  overflow: hidden;
+}
+
+.schedule-card .card-body {
+  overflow-wrap: break-word;
+  word-break: keep-all;
+  white-space: normal;
+}
+
+.schedule-card .card-body p {
+  line-height: 1.45;
+  margin-bottom: 4px;
 }
 
 .schedule-card.status-scheduled {
@@ -834,6 +878,14 @@ textarea {
   align-items: flex-start;
   gap: 8px;
   margin-bottom: 8px;
+  min-width: 0;
+}
+
+.card-header > div {
+  min-width: 0;
+  flex: 1;
+  overflow-wrap: break-word;
+  word-break: keep-all;
 }
 
 .card-title {
@@ -1169,6 +1221,47 @@ textarea {
 
   .form-grid {
     grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .schedule-item {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .schedule-item-main,
+  .schedule-item-actions,
+  .card-actions {
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .schedule-item-actions .btn-sm,
+  .card-actions .btn-sm {
+    font-size: 0.8rem;
+    padding: 6px 10px;
+  }
+
+  .card-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .card-header .status-badge {
+    align-self: flex-start;
+  }
+}
+
+@media (min-width: 641px) {
+  .right-panels .schedule-item {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .right-panels .schedule-item-actions {
+    width: 100%;
+    max-width: 100%;
   }
 }
 

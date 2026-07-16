@@ -413,7 +413,7 @@ class Renderer {
     if (feedback === 'done') {
       return `
         <span class="parent-feedback-badge done">${this.parentFeedbackLabels.done}</span>
-        <button type="button" class="btn btn-secondary btn-sm" data-parent-feedback="pending" data-id="${schedule.id}">미완료로</button>`;
+        <button type="button" class="btn btn-secondary btn-sm" data-parent-feedback="pending" data-id="${schedule.id}">미완료로 변경</button>`;
     }
 
     return '';
