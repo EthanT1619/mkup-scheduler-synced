@@ -4,6 +4,8 @@
 class ScheduleRepository {
   static TABLE = 'makeup_schedules';
 
+  static PARENT_FEEDBACK_VALUES = new Set(['not_applicable', 'pending', 'done']);
+
   constructor(supabaseClient) {
     this.client = supabaseClient;
   }
@@ -13,6 +15,13 @@ class ScheduleRepository {
     if (!value) return '';
     const str = String(value);
     return str.length >= 5 ? str.slice(0, 5) : str;
+  }
+
+  static normalizeParentFeedbackStatus(value) {
+    if (value && ScheduleRepository.PARENT_FEEDBACK_VALUES.has(value)) {
+      return value;
+    }
+    return 'not_applicable';
   }
 
   /** 앱 객체 → DB insert/update payload */
@@ -27,6 +36,10 @@ class ScheduleRepository {
       absence_progress: schedule.absenceProgress || null,
       memo: schedule.memo || null,
       status: schedule.status,
+      parent_feedback_status: ScheduleRepository.normalizeParentFeedbackStatus(
+        schedule.parentFeedbackStatus ??
+          (schedule.status === 'completed' ? 'pending' : 'not_applicable')
+      ),
     };
 
     if (ownerId) {
@@ -57,6 +70,9 @@ class ScheduleRepository {
       absenceProgress: row.absence_progress || '',
       memo: row.memo || '',
       status: row.status,
+      parentFeedbackStatus: ScheduleRepository.normalizeParentFeedbackStatus(
+        row.parent_feedback_status
+      ),
       createdAt: row.created_at,
       updatedAt: row.updated_at,
     };
@@ -118,16 +134,42 @@ class ScheduleRepository {
     return ScheduleRepository.fromDbRow(data);
   }
 
-  async updateStatus(id, status) {
+  async updateStatus(id, status, parentFeedbackStatus) {
     const { data, error } = await this.client
       .from(ScheduleRepository.TABLE)
-      .update({ status })
+      .update({
+        status,
+        parent_feedback_status: ScheduleRepository.normalizeParentFeedbackStatus(
+          parentFeedbackStatus
+        ),
+      })
       .eq('id', id)
       .select()
       .single();
 
     if (error) {
       throw new Error(ScheduleRepository.toErrorMessage(error, '상태를 변경하지 못했습니다.'));
+    }
+
+    return ScheduleRepository.fromDbRow(data);
+  }
+
+  async updateParentFeedback(id, parentFeedbackStatus) {
+    const { data, error } = await this.client
+      .from(ScheduleRepository.TABLE)
+      .update({
+        parent_feedback_status: ScheduleRepository.normalizeParentFeedbackStatus(
+          parentFeedbackStatus
+        ),
+      })
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) {
+      throw new Error(
+        ScheduleRepository.toErrorMessage(error, '학부모 피드백 상태를 변경하지 못했습니다.')
+      );
     }
 
     return ScheduleRepository.fromDbRow(data);

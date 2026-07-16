@@ -17,8 +17,12 @@ class ScheduleManager {
       endTime = ScheduleManager.addMinutes(startTime, 60);
     }
 
-    const { time, ...rest } = schedule;
-    return { ...rest, startTime, endTime };
+    const rawFeedback =
+      schedule.parentFeedbackStatus ?? schedule.parent_feedback_status ?? null;
+    const parentFeedbackStatus = ScheduleRepository.normalizeParentFeedbackStatus(rawFeedback);
+
+    const { time, parent_feedback_status, ...rest } = schedule;
+    return { ...rest, startTime, endTime, parentFeedbackStatus };
   }
 
   static getStartTime(schedule) {
@@ -48,6 +52,12 @@ class ScheduleManager {
     const nh = Math.floor(total / 60) % 24;
     const nm = total % 60;
     return `${String(nh).padStart(2, '0')}:${String(nm).padStart(2, '0')}`;
+  }
+
+  static parentFeedbackForStatusChange(nextStatus) {
+    if (nextStatus === 'completed') return 'pending';
+    if (nextStatus === 'scheduled' || nextStatus === 'cancelled') return 'not_applicable';
+    return 'not_applicable';
   }
 
   isLoaded() {
@@ -100,10 +110,19 @@ class ScheduleManager {
     };
   }
 
+  replaceScheduleInMemory(normalized) {
+    const index = this.schedules.findIndex((s) => s.id === normalized.id);
+    if (index !== -1) {
+      this.schedules[index] = normalized;
+    }
+    return normalized;
+  }
+
   async add(data, ownerId) {
     const now = new Date().toISOString();
     const payload = {
       ...this.buildScheduleData(data),
+      parentFeedbackStatus: 'not_applicable',
       createdAt: now,
       updatedAt: now,
     };
@@ -118,32 +137,43 @@ class ScheduleManager {
     const existing = this.getById(id);
     if (!existing) return null;
 
+    const built = this.buildScheduleData(data);
+    const nextStatus = built.status;
+    let parentFeedbackStatus = existing.parentFeedbackStatus ?? 'not_applicable';
+
+    if (nextStatus === 'completed' && existing.status !== 'completed') {
+      parentFeedbackStatus = 'pending';
+    } else if (nextStatus === 'scheduled' || nextStatus === 'cancelled') {
+      parentFeedbackStatus = 'not_applicable';
+    }
+
     const payload = {
       ...existing,
-      ...this.buildScheduleData(data),
+      ...built,
+      parentFeedbackStatus,
       updatedAt: new Date().toISOString(),
     };
 
     const updated = await this.repository.update(id, payload);
-    const normalized = this.normalize(updated);
-    const index = this.schedules.findIndex((s) => s.id === id);
-    if (index !== -1) {
-      this.schedules[index] = normalized;
-    }
-    return normalized;
+    return this.replaceScheduleInMemory(this.normalize(updated));
   }
 
   async updateStatus(id, status) {
     const existing = this.getById(id);
     if (!existing) return null;
 
-    const updated = await this.repository.updateStatus(id, status);
-    const normalized = this.normalize(updated);
-    const index = this.schedules.findIndex((s) => s.id === id);
-    if (index !== -1) {
-      this.schedules[index] = normalized;
-    }
-    return normalized;
+    const parentFeedbackStatus = ScheduleManager.parentFeedbackForStatusChange(status);
+    const updated = await this.repository.updateStatus(id, status, parentFeedbackStatus);
+    return this.replaceScheduleInMemory(this.normalize(updated));
+  }
+
+  async updateParentFeedback(id, parentFeedbackStatus) {
+    const existing = this.getById(id);
+    if (!existing) return null;
+    if (existing.status !== 'completed') return null;
+
+    const updated = await this.repository.updateParentFeedback(id, parentFeedbackStatus);
+    return this.replaceScheduleInMemory(this.normalize(updated));
   }
 
   async delete(id) {

@@ -283,27 +283,19 @@ class App {
     });
 
     document.getElementById('selected-day-schedules').addEventListener('click', (e) => {
-      if (this.isQuickStatusTarget(e)) {
-        this.handleQuickStatus(e);
-        return;
-      }
-      this.handleScheduleItemClick(e);
+      this.handleSchedulePanelClick(e);
     });
 
     document.getElementById('today-schedules').addEventListener('click', (e) => {
-      if (this.isQuickStatusTarget(e)) {
-        this.handleQuickStatus(e);
-        return;
-      }
-      this.handleScheduleItemClick(e);
+      this.handleSchedulePanelClick(e);
     });
 
     document.getElementById('week-schedules').addEventListener('click', (e) => {
-      if (this.isQuickStatusTarget(e)) {
-        this.handleQuickStatus(e);
-        return;
-      }
-      this.handleScheduleItemClick(e);
+      this.handleSchedulePanelClick(e);
+    });
+
+    document.getElementById('student-history').addEventListener('click', (e) => {
+      this.handleSchedulePanelClick(e);
     });
 
     document.getElementById('schedule-form').addEventListener('submit', (e) => {
@@ -485,6 +477,22 @@ class App {
     return !!e.target.closest('[data-quick-status]');
   }
 
+  isParentFeedbackTarget(e) {
+    return !!e.target.closest('[data-parent-feedback]');
+  }
+
+  handleSchedulePanelClick(e) {
+    if (this.isParentFeedbackTarget(e)) {
+      this.handleParentFeedback(e);
+      return;
+    }
+    if (this.isQuickStatusTarget(e)) {
+      this.handleQuickStatus(e);
+      return;
+    }
+    this.handleScheduleItemClick(e);
+  }
+
   handleScheduleItemClick(e) {
     if (e.target.closest('button')) return;
     const item = e.target.closest('[data-schedule-id]');
@@ -494,6 +502,11 @@ class App {
   }
 
   handleScheduleAction(e) {
+    if (this.isParentFeedbackTarget(e)) {
+      this.handleParentFeedback(e);
+      return;
+    }
+
     if (this.isQuickStatusTarget(e)) {
       this.handleQuickStatus(e);
       return;
@@ -527,6 +540,31 @@ class App {
       this.refresh();
     } catch (error) {
       this.showStatusBanner(error.message || '상태 변경에 실패했습니다.', 'error');
+    } finally {
+      this.setSavingState(false);
+    }
+  }
+
+  async handleParentFeedback(e) {
+    const btn = e.target.closest('[data-parent-feedback]');
+    if (!btn || this.saving) return;
+
+    const schedule = this.schedules.getById(btn.dataset.id);
+    if (!schedule || schedule.status !== 'completed') return;
+
+    const nextFeedback = btn.dataset.parentFeedback;
+    const message =
+      nextFeedback === 'done'
+        ? '학부모 피드백이 완료로 표시되었습니다.'
+        : '학부모 피드백이 미완료로 표시되었습니다.';
+
+    try {
+      this.setSavingState(true);
+      await this.schedules.updateParentFeedback(btn.dataset.id, nextFeedback);
+      this.showStatusBanner(message, 'success');
+      this.refresh();
+    } catch (error) {
+      this.showStatusBanner(error.message || '학부모 피드백 상태 변경에 실패했습니다.', 'error');
     } finally {
       this.setSavingState(false);
     }

@@ -15,6 +15,11 @@ class Renderer {
       cancelled: '취소',
     };
 
+    this.parentFeedbackLabels = {
+      pending: '학부모 피드백 대기',
+      done: '학부모 피드백 완료',
+    };
+
     this.weekDays = ['일', '월', '화', '수', '목', '금', '토'];
     this.timelineDate = CalendarManager.formatDate(new Date());
   }
@@ -207,7 +212,7 @@ class Renderer {
               <div class="schedule-item-meta">${this.escape(s.reason || '사유 없음')} · ${this.statusLabels[s.status]}</div>
             </div>
             <div class="schedule-item-actions">
-              ${this.renderQuickStatusButtons(s)}
+              ${this.renderScheduleActionButtons(s)}
             </div>
           </div>`;
       })
@@ -395,6 +400,29 @@ class Renderer {
       <button type="button" class="btn btn-secondary btn-sm" data-quick-status="scheduled" data-id="${schedule.id}">예정으로</button>`;
   }
 
+  renderParentFeedbackButtons(schedule) {
+    if (schedule.status !== 'completed') return '';
+
+    const feedback = schedule.parentFeedbackStatus ?? 'not_applicable';
+
+    if (feedback === 'pending') {
+      return `
+        <button type="button" class="btn btn-primary btn-sm" data-parent-feedback="done" data-id="${schedule.id}">학부모 피드백 완료</button>`;
+    }
+
+    if (feedback === 'done') {
+      return `
+        <span class="parent-feedback-badge done">${this.parentFeedbackLabels.done}</span>
+        <button type="button" class="btn btn-secondary btn-sm" data-parent-feedback="pending" data-id="${schedule.id}">미완료로</button>`;
+    }
+
+    return '';
+  }
+
+  renderScheduleActionButtons(schedule) {
+    return `${this.renderQuickStatusButtons(schedule)}${this.renderParentFeedbackButtons(schedule)}`;
+  }
+
   /** 보강 카드 HTML */
   renderScheduleCard(schedule) {
     return `
@@ -412,7 +440,7 @@ class Renderer {
           <p><strong>결석일 진도:</strong> ${this.escape(schedule.absenceProgress || '-')}</p>
         </div>
         <div class="card-actions">
-          ${this.renderQuickStatusButtons(schedule)}
+          ${this.renderScheduleActionButtons(schedule)}
           <button type="button" class="btn btn-secondary btn-sm" data-edit="${schedule.id}">수정</button>
           <button type="button" class="btn btn-danger btn-sm" data-delete="${schedule.id}">삭제</button>
         </div>
@@ -428,7 +456,7 @@ class Renderer {
           <div class="schedule-item-meta">${this.escape(schedule.reason || '사유 없음')} · ${this.statusLabels[schedule.status]}</div>
         </div>
         <div class="schedule-item-actions">
-          ${this.renderQuickStatusButtons(schedule)}
+          ${this.renderScheduleActionButtons(schedule)}
         </div>
       </div>`;
   }
@@ -523,6 +551,9 @@ class Renderer {
             <p><strong>사유:</strong> ${this.escape(s.reason || '-')}</p>
             <p><strong>메모:</strong> ${this.escape(s.memo || '-')}</p>
             <p><strong>결석일 진도:</strong> ${this.escape(s.absenceProgress || '-')}</p>
+          </div>
+          <div class="card-actions">
+            ${this.renderScheduleActionButtons(s)}
           </div>
         </div>`
       )
